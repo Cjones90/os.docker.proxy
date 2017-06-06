@@ -1,0 +1,11 @@
+node_modules/
+logs
+.git
+dumps
+
+app.bundle.js
+npm-debug.log
+.DS_Store
+
+creds/
+hosts*.json

@@ -1,0 +1,43 @@
+version: "3"
+services:
+    main:
+        build: .
+        image: jestrr/proxy:0.1.0
+        entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
+        # NOTE: When deploying a "stack" to a swarm, volumes MUST be commented out
+        # When developing locally, uncomment volumes and re- docker-compose up
+        volumes:
+            - ./src:/home/app/src
+            - ./server:/home/app/server
+            - ./hosts.json:/home/app/server/hosts.json
+        #    - $REMOTE_KEYS_DIR:/home/app/creds
+        extra_hosts:
+            # IP address of your docker0 bridge - Defaults to 172.17.0.1
+            # Use any hostname - Must match the 'proxy-to' hostname in hosts.json
+            # Here we use `localmachine`
+            localmachine: "172.17.0.1"
+        deploy:
+            replicas: 1
+            update_config:
+                parallelism: 1
+                delay: 10s
+            restart_policy:
+                max_attempts: 3
+                condition: on-failure
+        ports:
+            # HOST:CONTAINER
+            - "80:4000"
+            - "443:4001"
+        environment:
+            PUB_FILES: ./pub/
+            BIN: ./server/bin/
+            OUTPUT_FILES: ./server/output/
+
+            PROXY_TO_SSL: "false"
+            SSL_PROXY_ON: "false"
+
+            # Consul
+            SERVICE_NAME: proxy
+            SERVICE_PORT: 80
+            REGISTER_SERVICE: "false"
+            IMAGE_VER: 0.1.0
