@@ -8,10 +8,11 @@ const SERVICE_PORT = process.env.SERVICE_PORT
 const bridgeIP = "172.17.0.1"
 const consulAPIPort = 8500
 const IMAGE_VER = process.env.IMAGE_VER
+const DEREGISTER_ON_EXIT = JSON.parse(process.env.DEREGISTER_ON_EXIT) || false
 
 module.exports = {
 
-    register: () => {
+    register: function() {
         let serviceToRegister = {
             "ID": SERVICE_NAME,
             "Name": SERVICE_NAME,
@@ -21,12 +22,12 @@ module.exports = {
             "EnableTagOverride": false,
             "Checks": [
                 {
-                    "DeregisterCriticalServiceAfter": "30m",
+                    "DeregisterCriticalServiceAfter": "12h",
                     "HTTP": `http://localhost:${SERVICE_PORT}`,
                     "Interval": "20s"
                 },
                 {
-                    "DeregisterCriticalServiceAfter": "30m",
+                    "DeregisterCriticalServiceAfter": "12h",
                     "Script": `docker ps -f "name=${SERVICE_NAME}" -f status=running | wc -l | awk '{lines=$0-1; print lines}' `,
                     "Interval": "20s"
                 },
@@ -47,5 +48,31 @@ module.exports = {
         })
         req.on("error", (e) => { console.log("ERR:", e) })
         req.end(JSON.stringify(serviceToRegister))
+
+        if (DEREGISTER_ON_EXIT) {
+            // listen for TERM signal .e.g. kill
+            process.on('SIGTERM', this.deregister);
+            // listen for INT signal e.g. Ctrl-C
+            process.on('SIGINT', this.deregister);
+            process.on('exit', this.deregister);
+        }
+    },
+
+    deregister: function() {
+        console.log("Deregistering "+SERVICE_NAME);
+        let opts = {
+            method: "PUT",
+            port: consulAPIPort,
+            path: `/v1/agent/service/deregister/${SERVICE_NAME}`,
+            hostname: bridgeIP
+        }
+        let response = "";
+        let req = http.request(opts, (res) => {
+            res.setEncoding('utf8');
+            res.on('data', (chunk) => { response += chunk.toString(); });
+            res.on('end', () => { console.log(response); });
+        })
+        req.on("error", (e) => { console.log("ERR:", e) })
+        req.end()
     }
 }

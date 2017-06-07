@@ -37,8 +37,6 @@ const onHttpsUpgrade = (req, socket, head) => {
     });
 }
 
-Roster.connect(ROSTER_WS_URL);
-
 // Servers
 const httpServer = http.createServer((req, res) => {
     if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
