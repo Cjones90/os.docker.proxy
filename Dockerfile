@@ -1,8 +1,11 @@
-FROM jestrr/mods:0.1
+FROM jestrr/mods:no-java
 
 WORKDIR /home/app
-ADD . /home/app
+
+ADD package.json /home/app/package.json
 
 RUN npm install
+
+ADD . /home/app
 
 RUN npm run release
