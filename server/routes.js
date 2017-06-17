@@ -2,7 +2,6 @@
 
 const fs = require("fs");
 
-
 const routes = function (req, res) {
 
     const respond = (response) => {
@@ -18,19 +17,11 @@ const routes = function (req, res) {
 
     req.on('end', () => {
         let parsed = input ? JSON.parse(input) : "";
-        if(req.url.indexOf('/api/get/') > -1) {
-            switch(req.url) {
-                case "/": respond();
-                break;
-                default: respond();
-            }
-        }
-        else {
-            switch(req.url) {
-                case "/": respond();
-                break;
-                default: respond();
-            }
+
+        switch(req.url) {
+            case "/": respond();
+            break;
+            default: respond();
         }
     })
 }
