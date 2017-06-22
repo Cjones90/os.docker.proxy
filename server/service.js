@@ -13,7 +13,7 @@ module.exports = {
 
     register: function() {
         let script = `
-            NUM_CONTAINERS=$(docker ps -f "name=${SERVICE_NAME}" -f status=running | wc -l | awk '{lines=$0-1; print lines}');
+            NUM_CONTAINERS=$(docker ps -f status=running -f "label=com.ree.service=${SERVICE_NAME}" | wc -l | awk '{lines=$0-1; print lines}');
             echo $NUM_CONTAINERS;
             if [[ $NUM_CONTAINERS = 0 ]]; then exit 2 ; fi;
             if (( "$NUM_CONTAINERS" > 0 )); then exit 0 ; fi;`
@@ -49,6 +49,25 @@ module.exports = {
         req.on("error", (e) => { console.log("ERR:", e) })
         req.end(JSON.stringify(serviceToRegister))
 
+    },
+
+    deregister: function(service, ip, respond) {
+        console.log("Deregistering "+service);
+        let opts = {
+            method: "PUT",
+            port: consulAPIPort,
+            path: `/v1/agent/service/deregister/${service}`,
+            hostname: ip
+        }
+        let response = "";
+        let req = http.request(opts, (res) => {
+            res.setEncoding('utf8');
+            res.on('data', (chunk) => { response += chunk.toString(); });
+            res.on('end', () => { console.log("res:", response); respond && respond(response) });
+            res.on('error', () => { console.log("err:", response); });
+        })
+        req.on("error", (e) => { console.log("ERR:", e) })
+        req.end()
     }
 
 }
