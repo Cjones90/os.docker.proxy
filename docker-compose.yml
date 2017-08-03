@@ -8,7 +8,7 @@ services:
         # When developing locally, uncomment volumes and re- docker-compose up
         volumes:
             # NOTE: This project needs the hosts.json on the server
-            - /root/proxy/hosts.json:/home/app/server/hosts.json
+            - /root/os.docker.proxy/hosts.json:/home/app/server/hosts.json
             # - ./src:/home/app/src
             # - ./server:/home/app/server
             # - $REMOTE_KEYS_DIR:/home/app/creds
@@ -33,7 +33,7 @@ services:
             - "80:4000"
             - "443:4001"
         labels:
-            com.ree.service: proxy
+            com.consul.service: proxy
         environment:
             PUB_FILES: ./pub/
             BIN: ./server/bin/

@@ -13,10 +13,10 @@ module.exports = {
 
     register: function() {
         let script = `
-            NUM_CONTAINERS=$(docker ps -f status=running -f "label=com.ree.service=${SERVICE_NAME}" | wc -l | awk '{lines=$0-1; print lines}');
+            NUM_CONTAINERS=$(docker ps -f status=running -f "label=com.consul.service=${SERVICE_NAME}" | wc -l | awk '{lines=$0-1; print lines}');
             echo $NUM_CONTAINERS;
-            if [[ $NUM_CONTAINERS = 0 ]]; then exit 2 ; fi;
-            if (( "$NUM_CONTAINERS" > 0 )); then exit 0 ; fi;`
+            if [ "$NUM_CONTAINERS" = 0 ]; then exit 2 ; fi;
+            if [ "$NUM_CONTAINERS" > 0 ]; then exit 0 ; fi;`
 
         let serviceToRegister = {
             "ID": SERVICE_NAME,
