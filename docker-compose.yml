@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/proxy:0.4.3
+        image: jestrr/proxy:0.4.4
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         # NOTE: When deploying a "stack" to a swarm, the directories MUST exist on host
         volumes:

@@ -41,7 +41,9 @@ const onHttpsUpgrade = (req, socket, head) => {
 const httpServer = http.createServer((req, res) => {
     if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
     let requrl = url.parse(req.url).pathname
-    let hostname = url.parse(req.url).hostname
+    let hostname = req.headers.host.split(".").length > 2
+        ? req.headers.host.replace(/^[\w]+\./, "")
+        : req.headers.host
     if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
         console.log("Certbot");
         return proxy.web(req, res, { target: `http://cert.${hostname}:8080`}, (err) => {
