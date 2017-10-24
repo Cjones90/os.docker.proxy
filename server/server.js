@@ -64,14 +64,23 @@ if(REGISTER_SERVICE) { service.register(); }
 
 
 if(SSL_PROXY_ON) {
+
+    let key = fs.readFileSync("creds/privkey.pem", "utf8")
+    let fullchain = fs.readFileSync("creds/fullchain.pem", "utf8")
+    let chain = fs.readFileSync("creds/chain.pem", "utf8")
+
     // Ensure we dont attempt to start server without certs
-    let contents = fs.readFileSync("creds/privkey.pem", "utf8")
-    if (contents === "") { return; }
+    if (key === "") { return; }
+
+    // Remove double escaped newlines
+    key = key.split("\\n").join("\n")
+    fullchain = fullchain.split("\\n").join("\n")
+    chain = chain.split("\\n").join("\n")
 
     const options = {
-        key: fs.readFileSync("creds/privkey.pem"),
-        cert: fs.readFileSync("creds/fullchain.pem"),
-        ca: fs.readFileSync("creds/chain.pem")
+        key: key,
+        cert: fullchain,
+        ca: chain
     }
     const httpsServer = https.createServer(options, (req, res) => {
         if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
