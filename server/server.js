@@ -40,13 +40,6 @@ const onHttpsUpgrade = (req, socket, head) => {
 // Servers
 const httpServer = http.createServer((req, res) => {
     if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
-    let requrl = url.parse(req.url).pathname
-    let hostname = url.parse(req.url).hostname
-    if(requrl.indexOf("/.well-known/acme-challange") > -1) {
-        return proxy.web(req, res, { target: `http://cert.${hostname}`}, (err) => {
-            res.end("Could not proxy for certbot")
-        })
-    }
     if(PROXY_TO_SSL) {
         res.writeHead(302, {"Location": "https://"+req.headers.host+req.url}); // Redirect to https
         res.end();
@@ -70,14 +63,6 @@ if(SSL_PROXY_ON) {
     }
     const httpsServer = https.createServer(options, (req, res) => {
         if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
-        // NOTE: Not entirely sure if this is needed for acme challenge yet - will test
-        // let requrl = url.parse(req.url).pathname
-        // let hostname = url.parse(req.url).hostname
-        // if(requrl.indexOf("/.well-known/acme-challange") > -1) {
-        //     return proxy.web(req, res, { target: `https://cert.${hostname}`}, (err) => {
-        //         res.end("Could not proxy for certbot")
-        //     })
-        // }
         proxy.web(req, res, { target: "https://"+HOSTS[req.headers.host] }, (err) => {
             res.end("404 - Host appears to be down.")
         })

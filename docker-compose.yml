@@ -2,10 +2,9 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/proxy:0.4.0
+        image: jestrr/proxy:0.4.1
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
-        # NOTE: When deploying a "stack" to a swarm, volumes MUST be commented out
-        # When developing locally, uncomment volumes and re- docker-compose up
+        # NOTE: When deploying a "stack" to a swarm, the directories MUST exist on host 
         volumes:
             # NOTE: This project needs the hosts.json on the server
             - /root/os.docker.proxy/hosts.json:/home/app/server/hosts.json
