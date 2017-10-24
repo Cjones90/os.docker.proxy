@@ -40,6 +40,14 @@ const onHttpsUpgrade = (req, socket, head) => {
 // Servers
 const httpServer = http.createServer((req, res) => {
     if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
+    let requrl = url.parse(req.url).pathname
+    let hostname = url.parse(req.url).hostname
+    if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
+        console.log("Certbot");
+        return proxy.web(req, res, { target: `http://cert.${hostname}`}, (err) => {
+            res.end("Could not proxy for certbot")
+        })
+    }
     if(PROXY_TO_SSL) {
         res.writeHead(302, {"Location": "https://"+req.headers.host+req.url}); // Redirect to https
         res.end();
@@ -56,6 +64,10 @@ if(REGISTER_SERVICE) { service.register(); }
 
 
 if(SSL_PROXY_ON) {
+    // Ensure we dont attempt to start server without certs
+    let contents = fs.readFileSync("creds/privkey.pem", "utf8")
+    if (contents === "") { return; }
+
     const options = {
         key: fs.readFileSync("creds/privkey.pem"),
         cert: fs.readFileSync("creds/fullchain.pem"),
