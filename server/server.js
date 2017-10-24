@@ -44,7 +44,7 @@ const httpServer = http.createServer((req, res) => {
     let hostname = url.parse(req.url).hostname
     if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
         console.log("Certbot");
-        return proxy.web(req, res, { target: `http://cert.${hostname}`}, (err) => {
+        return proxy.web(req, res, { target: `http://cert.${hostname}:8080`}, (err) => {
             res.end("Could not proxy for certbot")
         })
     }
