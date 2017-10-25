@@ -40,10 +40,12 @@ const onHttpsUpgrade = (req, socket, head) => {
 // Servers
 const httpServer = http.createServer((req, res) => {
     if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
+
     let requrl = url.parse(req.url).pathname
     let hostname = req.headers.host.split(".").length > 2
         ? req.headers.host.replace(/^[\w]+\./, "")
         : req.headers.host
+
     if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
         console.log("Certbot");
         return proxy.web(req, res, { target: `http://cert.${hostname}:8080`}, (err) => {
@@ -66,24 +68,20 @@ if(REGISTER_SERVICE) { service.register(); }
 
 
 if(SSL_PROXY_ON) {
+    let options = {};
+    let keyExists = fs.existsSync("creds/privkey.pem")
 
-    let key = fs.readFileSync("creds/privkey.pem", "utf8")
-    let fullchain = fs.readFileSync("creds/fullchain.pem", "utf8")
-    let chain = fs.readFileSync("creds/chain.pem", "utf8")
-
-    // Ensure we dont attempt to start server without certs
-    if (key === "") { return; }
-
-    // Remove double escaped newlines
-    key = key.split("\\n").join("\n")
-    fullchain = fullchain.split("\\n").join("\n")
-    chain = chain.split("\\n").join("\n")
-
-    const options = {
-        key: key,
-        cert: fullchain,
-        ca: chain
+    if(keyExists) {
+        options = {
+            key: fs.readFileSync("creds/privkey.pem", "utf8"),
+            cert: fs.readFileSync("creds/fullchain.pem", "utf8"),
+            ca: fs.readFileSync("creds/chain.pem", "utf8")
+        }
     }
+
+    // Ensure we dont attempt to start httpsserver without certs
+    if (!keyExists || options.key === "") { return; }
+
     const httpsServer = https.createServer(options, (req, res) => {
         if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
         proxy.web(req, res, { target: "https://"+HOSTS[req.headers.host] }, (err) => {

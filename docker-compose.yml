@@ -2,16 +2,15 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/proxy:0.4.4
+        image: jestrr/proxy:0.4.5
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         # NOTE: When deploying a "stack" to a swarm, the directories MUST exist on host
         volumes:
             # NOTE: This project needs the hosts.json on the server
             - /root/os.docker.proxy/hosts.json:/home/app/server/hosts.json
-            # - ./src:/home/app/src
-            # - ./server:/home/app/server
-            # - $REMOTE_KEYS_DIR:/home/app/creds
             - /etc/ssl/creds:/home/app/creds
+            # - ./src:/home/app/src
+            # - ./server:/home/app/server            
         extra_hosts:
             # IP address of your docker0 bridge - Defaults to 172.17.0.1
             # Use any hostname - Must match the 'proxy-to' hostname in hosts.json
