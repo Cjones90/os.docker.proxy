@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/proxy:0.4.5
+        image: jestrr/proxy:0.4.6
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         # NOTE: When deploying a "stack" to a swarm, the directories MUST exist on host
         volumes:
@@ -10,7 +10,7 @@ services:
             - /root/os.docker.proxy/hosts.json:/home/app/server/hosts.json
             - /etc/ssl/creds:/home/app/creds
             # - ./src:/home/app/src
-            # - ./server:/home/app/server            
+            # - ./server:/home/app/server
         extra_hosts:
             # IP address of your docker0 bridge - Defaults to 172.17.0.1
             # Use any hostname - Must match the 'proxy-to' hostname in hosts.json
@@ -34,15 +34,15 @@ services:
         labels:
             com.consul.service: proxy
         environment:
+            # Consul
+            SERVICE_NAME: proxy
+            SERVICE_PORT: 80
+            REGISTER_SERVICE: "true"
+            IMAGE_VER: 0.4.6
+            # Server
             PUB_FILES: ./pub/
             BIN: ./server/bin/
             OUTPUT_FILES: ./server/output/
 
             PROXY_TO_SSL: "true"
             SSL_PROXY_ON: "true"
-
-            # Consul
-            SERVICE_NAME: proxy
-            SERVICE_PORT: 80
-            REGISTER_SERVICE: "true"
-            IMAGE_VER: 0.3.1

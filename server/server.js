@@ -28,11 +28,13 @@ const proxy = httpProxy.createProxyServer()
 
 const onHttpUpgrade = (req, socket, head) => {
     proxy.ws(req, socket, head, { target: "ws://"+HOSTS[req.headers.host] }, (err) => {
+        console.log(err);
         console.log("WS proxy err: ", err);
     });
 }
 const onHttpsUpgrade = (req, socket, head) => {
     proxy.ws(req, socket, head, { target: "wss://"+HOSTS[req.headers.host] }, (err) => {
+        console.log(err);
         console.log("WS proxy err: ", err);
     });
 }
@@ -49,6 +51,7 @@ const httpServer = http.createServer((req, res) => {
     if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
         console.log("Certbot");
         return proxy.web(req, res, { target: `http://cert.${hostname}:8080`}, (err) => {
+            console.log(err);
             res.end("Could not proxy for certbot")
         })
     }
@@ -58,6 +61,7 @@ const httpServer = http.createServer((req, res) => {
     }
     else {
         proxy.web(req, res, { target: "http://"+HOSTS[req.headers.host] }, (err) => {
+            console.log(err);
             res.end("404 - Host appears to be down.")
         })
     }
@@ -85,6 +89,7 @@ if(SSL_PROXY_ON) {
     const httpsServer = https.createServer(options, (req, res) => {
         if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
         proxy.web(req, res, { target: "https://"+HOSTS[req.headers.host] }, (err) => {
+            console.log(err);
             res.end("404 - Host appears to be down.")
         })
     })
