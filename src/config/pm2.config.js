@@ -4,7 +4,7 @@ module.exports = {
     apps: [{
         "name": "App",
         "cwd": "./",
-        "watch": true,
+        "watch": ["server", "pub"],
         "script": "./server/server.js",
         "out_file": "./logs/server-out.log",
         "error_file": "./logs/server-err.log",
@@ -12,7 +12,7 @@ module.exports = {
         "min_uptime": 10000,
         "max_restarts": 3,
         "next_gen_js": true,
-        "ignore_watch": ["node_modules", "server/bin", "server/output", "logs", ".git"],
+        "ignore_watch": ["server/bin", "server/output"],
         "exec_mode": "cluster",
         "instances": 1
   }]
