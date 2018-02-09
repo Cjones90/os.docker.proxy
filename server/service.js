@@ -1,13 +1,25 @@
 "use strict";
 
 const http = require("http");
-const SERVICE_NAME = process.env.SERVICE_NAME
-const SERVICE_PORT = process.env.SERVICE_PORT
+const fs = require("fs")
+
+const yaml = require("js-yaml");
+
+const yamlFile = fs.readFileSync("/home/app/docker-compose.yml")
+const yamlObj = yaml.safeLoad(yamlFile)
+
+const MAIN_SERVICE = yamlObj.services.main
+
+const DOCKER_IMAGE = MAIN_SERVICE.image
+const IMAGE_VER = DOCKER_IMAGE.match(/:(.+)/)[1]
+const SERVICE_NAME = process.env.SERVICE_NAME || DOCKER_IMAGE.match(/\/(\w+):/)[1]
+
+const SERVICE_PORTS = MAIN_SERVICE.ports[0].split(":")
+const SERVICE_PORT = SERVICE_PORTS.filter((port) => /^\d+$/.exec(port))[0]
 
 // This is dockers default docker0 bridge - Keeping hardcoded until its a problem
 const bridgeIP = "172.17.0.1"
 const consulAPIPort = 8500;
-const IMAGE_VER = process.env.IMAGE_VER
 
 module.exports = {
 

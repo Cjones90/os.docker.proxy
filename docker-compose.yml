@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/proxy:0.4.8
+        image: jestrr/proxy:0.4.9
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         # NOTE: When deploying a "stack" to a swarm, the directories MUST exist on host
         volumes:
@@ -35,14 +35,11 @@ services:
             com.consul.service: proxy
         environment:
             # Consul
-            SERVICE_NAME: proxy
-            SERVICE_PORT: 80,443
             REGISTER_SERVICE: "true"
-            IMAGE_VER: 0.4.7
             # Server
             PUB_FILES: ./pub/
             BIN: ./server/bin/
             OUTPUT_FILES: ./server/output/
-
+            # Config
             PROXY_TO_SSL: "true"
             SSL_PROXY_ON: "true"
