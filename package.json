@@ -2,7 +2,7 @@
     "name": "Proxy",
     "version": "0.0.1",
     "dependencies": {
-        "immutability-helper": "^2.0.0",
+        "http-proxy": "^1.16.2",
         "js-yaml": "^3.10.0"
     },
     "devDependencies": {
