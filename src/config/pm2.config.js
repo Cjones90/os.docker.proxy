@@ -4,7 +4,7 @@ module.exports = {
     apps: [{
         "name": "App",
         "cwd": "./",
-        "watch": ["server", "pub"],
+        "watch": ["server", "pub", "creds/privkey.pem"],
         "script": "./server/server.js",
         "out_file": "./logs/server-out.log",
         "error_file": "./logs/server-err.log",
@@ -15,5 +15,5 @@ module.exports = {
         "ignore_watch": ["server/bin", "server/output"],
         "exec_mode": "cluster",
         "instances": 1
-  }]
+    }]
 }
