@@ -5,7 +5,9 @@ const https = require("https");
 const fs = require("fs");
 const url = require("url");
 const path = require("path");
+
 const httpProxy = require("http-proxy");
+const { service } = require("os-npm-util");
 
 const PUB_FILES = process.env.PUB_FILES;
 const OUTPUT_FILES = process.env.OUTPUT_FILES
@@ -22,7 +24,7 @@ const HTTPS_CONTAINER_PORT = 4001;
 
 const HOSTS = require("./hosts.json");
 const routes = require("./routes.js");
-const service = require("./service.js");
+
 
 const proxy = httpProxy.createProxyServer()
 

@@ -3,6 +3,7 @@ logs
 .git
 creds
 
+pub/app.bundle.js
 npm-debug.log
 .DS_Store
 hosts*.json
