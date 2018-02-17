@@ -2,13 +2,16 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/proxy:0.5.0
+        image: jestrr/proxy:0.5.1
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         # NOTE: When deploying a "stack" to a swarm, the directories MUST exist on host
         volumes:
             # NOTE: This project needs the hosts.json on the server
+            # Remote
             - /root/os.docker.proxy/hosts.json:/home/app/server/hosts.json
             - /etc/ssl/creds:/home/app/creds
+            # Dev
+            # - ./hosts.json:/home/app/server/hosts.json
             # - ./src:/home/app/src
             # - ./server:/home/app/server
         extra_hosts:
