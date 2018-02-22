@@ -43,7 +43,10 @@ const onHttpsUpgrade = (req, socket, head) => {
 
 // Servers
 const httpServer = http.createServer((req, res) => {
-    if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
+    if(!HOSTS[req.headers.host]) {
+        console.log(`Could not find 'req.headers.host': ${req.headers.host} in 'HOSTS'`);
+        return res.end("404 - Invalid host");
+    }
 
     let requrl = url.parse(req.url).pathname
     let hostname = req.headers.host.split(".").length > 2
@@ -53,7 +56,7 @@ const httpServer = http.createServer((req, res) => {
     if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
         console.log("Certbot");
         return proxy.web(req, res, { target: `http://cert.${hostname}:8080`}, (err) => {
-            console.log(err);
+            console.log("ERR - SERVER.ACME-CHALLENGE:\n", err);
             res.end("Could not proxy for certbot")
         })
     }
@@ -63,7 +66,7 @@ const httpServer = http.createServer((req, res) => {
     }
     else {
         proxy.web(req, res, { target: "http://"+HOSTS[req.headers.host] }, (err) => {
-            console.log(err);
+            console.log("ERR - SERVER.HTTP_SERVER:\n", err);
             res.end("404 - Host appears to be down.")
         })
     }
@@ -86,12 +89,14 @@ if(SSL_PROXY_ON) {
     }
 
     // Ensure we dont attempt to start httpsserver without certs
-    if (!keyExists || options.key === "") { return; }
+    if (!keyExists || options.key === "") {
+        return console.log("SSL_PROXY_ON is set to true, but certs do not exist.");
+    }
 
     const httpsServer = https.createServer(options, (req, res) => {
         if(!HOSTS[req.headers.host]) { return res.end("404 - Invalid host"); }
         proxy.web(req, res, { target: "https://"+HOSTS[req.headers.host] }, (err) => {
-            console.log(err);
+            console.log("ERR - SERVER.HTTPS_SERVER:\n", err);
             res.end("404 - Host appears to be down.")
         })
     })

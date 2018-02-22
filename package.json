@@ -3,7 +3,7 @@
     "version": "0.0.1",
     "dependencies": {
         "http-proxy": "^1.16.2",
-        "os-npm-util": "git+https://github.com/Cjones90/os.npm.util.git#0.2.0"
+        "os-npm-util": "git+https://github.com/Cjones90/os.npm.util.git#0.2.2"
     },
     "devDependencies": {
         "babel-core": "^6.22.1",
