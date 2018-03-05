@@ -3,7 +3,7 @@
     "version": "0.0.1",
     "dependencies": {
         "http-proxy": "^1.16.2",
-        "os-npm-util": "git+https://github.com/Cjones90/os.npm.util.git#0.2.2"
+        "os-npm-util": "https://github.com/Cjones90/os.npm.util/tarball/master#0.2.5"
     },
     "devDependencies": {
         "babel-core": "^6.22.1",
@@ -18,10 +18,14 @@
         "react": "^15.3.0",
         "react-dom": "^15.3.0",
         "style-loader": "^0.13.1",
-        "webpack": "^1.14.0"
+        "webpack": "^1.14.0",
+        "html-webpack-plugin": "^2.30.1"
     },
     "scripts": {
         "watch": "webpack --config='src/config/webpack.config.js' --progress --colors --watch",
         "release": "webpack --config='src/config/webpack.config.js' --progress --colors --optimize-minimize"
-    }
+    },
+    "description": "Docker + Node http(s) proxy",
+    "repository": "https://github.com/Cjones90/os.docker.proxy.git",
+    "license": "MIT"
 }

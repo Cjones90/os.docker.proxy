@@ -4,7 +4,7 @@ module.exports = {
     apps: [{
         "name": "App",
         "cwd": "./",
-        "watch": ["server", "pub", "creds/privkey.pem"],
+        "watch": ["server", "creds/privkey.pem"],
         "script": "./server/server.js",
         "out_file": "./logs/server-out.log",
         "error_file": "./logs/server-err.log",

@@ -1,21 +1,23 @@
 version: "3.5"
 services:
-    main:
+    dev:
         build:
             context: .
-            target: prod
-        image: jestrr/proxy:0.8.0-alpine
+            target: src
+        image: jestrr/proxy:dev
         entrypoint: ["pm2-runtime", "server/pm2.config.js"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
-            - /root/os.docker.proxy/hosts.json:/home/app/server/hosts.json
+            - ./hosts.json:/home/app/server/hosts.json
+            - ./src:/home/app/src
+            - ./server:/home/app/server
         extra_hosts:
             localmachine: "172.17.0.1"
         deploy:
             replicas: 2
             update_config:
                 parallelism: 1
-                delay: 10s
+                delay: 15s
                 failure_action: rollback
                 max_failure_ratio: 1
                 order: start-first
@@ -35,5 +37,6 @@ services:
         labels:
             com.consul.service: proxy
         environment:
-            PROXY_TO_SSL: "true"
-            SSL_PROXY_ON: "true"
+            REGISTER_SERVICE: "false"
+            PROXY_TO_SSL: "false"
+            SSL_PROXY_ON: "false"

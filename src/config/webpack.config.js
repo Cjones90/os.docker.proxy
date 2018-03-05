@@ -1,11 +1,20 @@
 "use strict";
 
 const path = require("path")
-const webpack = require('webpack');
 
-let plugins = process.argv.indexOf("--optimize-minimize") > -1
-    ? [ new webpack.DefinePlugin({ 'process.env': { NODE_ENV: JSON.stringify('production')  } }) ]
-    : []
+const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+
+let plugins = [ new HtmlWebpackPlugin({
+        template: "./pub/template.html",
+        filename: "index.html",
+        hash: true
+    })
+]
+
+process.argv.indexOf("--optimize-minimize") > -1
+    ? plugins.push( new webpack.DefinePlugin({ 'process.env': { NODE_ENV: JSON.stringify('production')  } }) )
+    : ""
 
 module.exports = [{
     entry: {

@@ -1,22 +1,44 @@
-# TODO: Check which is the latest LTS that works/has been stable
-FROM node
 
-RUN apt-get update && apt-get install -y \
-    vim \
-    git
-
-# TODO: Check which version has been stable
-# Might not even need either of these for the scraper
-RUN npm i node-gyp -g pm2 -g
-
+FROM alpine:edge AS base
 WORKDIR /home/app
+RUN apk add --no-cache \
+    nodejs=8.9.4-r0 \
+    vim  \
+    bash \
+    curl \
+    && \
+    rm -rf /var/cache/apk/*
+ENV PUB_FILES           ./pub/
+ENV BIN                 ./server/bin/
+ENV OUTPUT_FILES        ./server/output/
+ENV REGISTER_SERVICE    "true"
+ENV USE_AUTH            "true"
+ENV USE_CONSUL_DB       "true"
 
+
+FROM base AS cache
+RUN apk add --no-cache nodejs-npm=8.9.4-r0
+RUN npm install -g pm2@2.10.1 -only=prod --no-optional --no-package-lock
 ADD package.json /home/app/package.json
-RUN npm install
 
+
+FROM cache AS src
+RUN npm install -only=prod --no-optional --no-package-lock
+RUN cp -R node_modules prod_mods
+RUN npm install --no-optional --no-package-lock
+ADD pub /home/app/pub
 ADD src /home/app/src
-#RUN npm run release
-
-#ADD pub /home/app/pub
+RUN npm run release
 ADD server /home/app/server
 ADD docker-compose.yml /home/app/docker-compose.yml
+
+
+FROM base AS prod
+ADD pub /home/app/pub
+COPY --from=src /home/app/prod_mods ./node_modules
+COPY --from=src /home/app/pub/app.bundle.js ./pub/app.bundle.js
+COPY --from=src /home/app/pub/index.html ./pub/index.html
+COPY --from=src /home/app/server /home/app/server
+COPY --from=src /home/app/docker-compose.yml /home/app/docker-compose.yml
+COPY --from=cache /usr/lib/node_modules/pm2 /usr/lib/node_modules/pm2
+RUN ln -s /usr/lib/node_modules/pm2/bin/pm2* /usr/bin
