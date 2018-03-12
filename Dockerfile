@@ -31,6 +31,11 @@ ADD src /home/app/src
 RUN npm run release
 ADD server /home/app/server
 ADD docker-compose.yml /home/app/docker-compose.yml
+HEALTHCHECK --interval=5s --timeout=10s --start-period=5s \
+    CMD exit $(curl -s http://localhost/healthcheck)
+LABEL com.consul.service="proxy"
+ENTRYPOINT ["pm2-runtime", "server/pm2.config.js"]
+CMD [""]
 
 
 FROM base AS prod
@@ -42,3 +47,8 @@ COPY --from=src /home/app/server /home/app/server
 COPY --from=src /home/app/docker-compose.yml /home/app/docker-compose.yml
 COPY --from=cache /usr/lib/node_modules/pm2 /usr/lib/node_modules/pm2
 RUN ln -s /usr/lib/node_modules/pm2/bin/pm2* /usr/bin
+HEALTHCHECK --interval=5s --timeout=10s --start-period=30s \
+    CMD exit $(curl -s http://localhost/healthcheck)
+LABEL com.consul.service="proxy"
+ENTRYPOINT ["pm2-runtime", "server/pm2.config.js"]
+CMD [""]

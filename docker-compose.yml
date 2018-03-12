@@ -4,13 +4,12 @@ services:
         build:
             context: .
             target: prod
-        image: jestrr/proxy:0.8.0-alpine
-        entrypoint: ["pm2-runtime", "server/pm2.config.js"]
-        volumes:
-            - /etc/ssl/creds:/home/app/creds
-            - /root/os.docker.proxy/hosts.json:/home/app/server/hosts.json
-        extra_hosts:
-            localmachine: "172.17.0.1"
+        image: jestrr/proxy:0.9.0
+        networks:
+            - proxy
+        ports:
+            - "80:80"
+            - "443:443"
         deploy:
             replicas: 2
             update_config:
@@ -21,19 +20,20 @@ services:
                 order: start-first
             restart_policy:
                 max_attempts: 3
-                # condition: on-failure
+                condition: on-failure
             placement:
                 constraints:
                     - node.role == manager
                 preferences:
                     - spread: node.labels.dc
                     - spread: node.labels.az
-        ports:
-            # HOST:CONTAINER
-            - "80:4000"
-            - "443:4001"
-        labels:
-            com.consul.service: proxy
         environment:
-            PROXY_TO_SSL: "true"
-            SSL_PROXY_ON: "true"
+            LISTEN_ON_SSL:      "true"
+            SSL_TERMINATION:    "true"
+            HTTP_PORT:          80
+            HTTPS_PORT:         443
+            # DOMAIN:             "${DOMAIN}"
+
+networks:
+    proxy:
+        external: true

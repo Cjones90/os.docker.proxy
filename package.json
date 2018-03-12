@@ -3,7 +3,8 @@
     "version": "0.0.1",
     "dependencies": {
         "http-proxy": "^1.16.2",
-        "os-npm-util": "https://github.com/Cjones90/os.npm.util/tarball/master#0.2.5"
+        "os-npm-util": "https://github.com/Cjones90/os.npm.util/tarball/master#0.4.0",
+        "consul": "^0.30.0"
     },
     "devDependencies": {
         "babel-core": "^6.22.1",
