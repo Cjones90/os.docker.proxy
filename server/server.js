@@ -43,6 +43,7 @@ setInterval(getAppRoutes, 1000 * (DEV_ENV ? 30 : 60))
 function getAppRoutes() {
     consul.kv.get({key: "apps", recurse: true}, (err, results) => {
         if(err) { console.log("ERR - SERVER.KVGETAPPS:\n", err);}
+        if(!results) { return console.log("ERR - SERVER.KVGETAPPS: No apps found"); process.exit(1) }
 
         let apps = {}
         results.forEach((app) => {
@@ -59,6 +60,8 @@ function getAppRoutes() {
 }
 
 function registerEndpoints(apps, domain) {
+    // For now we don't serve up anything on default domain until we have a need
+    HOSTS[domain] = `http://cert.${domain}:8080`
     Object.keys(apps).forEach((appName) => {
         let host = appName+"."+domain
         let betahost = "beta."+host
