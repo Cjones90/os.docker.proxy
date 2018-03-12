@@ -38,7 +38,7 @@ const proxy = httpProxy.createProxyServer()
 let HOSTS = {}
 
 getAppRoutes()
-setInterval(getAppRoutes, 1000 * (DEV_ENV ? 30 : 60)
+setInterval(getAppRoutes, 1000 * (DEV_ENV ? 30 : 60))
 
 function getAppRoutes() {
     consul.kv.get({key: "apps", recurse: true}, (err, results) => {
@@ -71,7 +71,9 @@ function registerEndpoints(apps, domain) {
 
 
 const onProtoUpgrade = (req, socket, head) => {
-    let targetProto = SSL_TERMINATION ? "ws:" : "wss:"
+    let targetProto = LISTEN_ON_SSL
+        ? SSL_TERMINATION ? "ws:" : "wss:"
+        : "ws:"
     proxy.ws(req, socket, head, { target: `${targetProto}//`+HOSTS[req.headers.host] }, (err) => {
         err && console.log("WS proxy err: ", err);
     });
