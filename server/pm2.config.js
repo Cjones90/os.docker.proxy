@@ -15,8 +15,7 @@ module.exports = {
         "ignore_watch": ["server/bin", "server/output"],
         "exec_mode": "cluster",
         "instances": 1,
-        "kill_timeout" : 5500,
-        "listen_timeout": 2000,
+        "kill_timeout" : 8000,
         "wait_ready": true
     }]
 }

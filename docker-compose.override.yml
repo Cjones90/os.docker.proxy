@@ -9,6 +9,8 @@ services:
         volumes:
             - ./src:/home/app/src
             - ./server:/home/app/server
+            - ./docker-compose.override.yml:/home/app/docker-compose.yml
+            # - ./hosts.js:/home/app/hosts.js
         ### NOTE: You can omit/comment out networks for development
         networks:
             - proxy
@@ -37,12 +39,13 @@ services:
         healthcheck:
             test: exit $$(curl -s http://localhost/healthcheck)
             interval: 5s
-            timeout: 10s
-            start_period: 0s
+            timeout: 2s
+            start_period: 5s
         environment:
             REGISTER_SERVICE:       "false"
             LISTEN_ON_SSL:          "false"
             SSL_TERMINATION:        "false"
+            USE_CONSUL_ROUTES:      "false"
             LOG_EVERY_NUM_CHECKS:   5
             HTTP_PORT:              80
             HTTPS_PORT:             443

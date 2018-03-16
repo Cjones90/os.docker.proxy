@@ -14,17 +14,16 @@ const serverState = require("./serverState.js");
 const BIN = process.env.BIN;
 const PUB_FILES = process.env.PUB_FILES;
 const OUTPUT_FILES = process.env.OUTPUT_FILES;
-const REGISTER_SERVICE = JSON.parse(process.env.REGISTER_SERVICE);
 const DEV_ENV = process.env.DEV_ENV ? JSON.parse(process.env.DEV_ENV) : ""
-
-const CONSUL_CHECK_UUID = os.hostname();
-const LOG_EVERY_NUM_CHECKS = process.env.LOG_EVERY_NUM_CHECKS || 15;
-let serverCheckCount = 0;
+const REGISTER_SERVICE = process.env.REGISTER_SERVICE
+    ? JSON.parse(process.env.REGISTER_SERVICE)
+    : false;
 
 const HTTP_PORT = process.env.HTTP_PORT ? process.env.HTTP_PORT : 80;
 const HTTPS_PORT = process.env.HTTPS_PORT ? process.env.HTTPS_PORT : 443;
 const LISTEN_ON_SSL = process.env.LISTEN_ON_SSL ? JSON.parse(process.env.LISTEN_ON_SSL) : false;
 const SSL_TERMINATION = process.env.SSL_TERMINATION ? JSON.parse(process.env.SSL_TERMINATION) : false;
+const USE_CONSUL_ROUTES = process.env.USE_CONSUL_ROUTES ? JSON.parse(process.env.USE_CONSUL_ROUTES) : false;
 
 const httpProxy = require("http-proxy");
 
@@ -35,11 +34,55 @@ const httpProxy = require("http-proxy");
 const consul = require('consul')({host: `172.17.0.1`});
 const proxy = httpProxy.createProxyServer()
 
+
+
+serverState.registerConnection("http")
+LISTEN_ON_SSL && serverState.registerConnection("https")
+
 let HOSTS = {}
 
-getAppRoutes()
-setInterval(getAppRoutes, 1000 * (DEV_ENV ? 30 : 60))
+if(USE_CONSUL_ROUTES) {
+    getAppRoutes()
+    setInterval(getAppRoutes, 1000 * (DEV_ENV ? 30 : 60))
+}
+else {
+    const hostsfile = fs.existsSync(`/run/secrets/hosts`) ? fs.readFileSync(`/run/secrets/hosts`) : ""
+    HOSTS = hostsfile ? JSON.parse(hostsfile) : ""
 
+    if(!Object.keys(HOSTS).length) {
+        console.log("No hosts file found mounted at /run/secrets/hosts");
+        console.log("If you're using docker swarm, be sure to add the secret 'hosts'");
+        try {
+            HOSTS = require("/home/app/hosts.js")
+            console.log("Found hosts file at /home/app/hosts.js");
+        }
+        catch(e) {
+            console.log(e);
+            console.log("No file found mounted at /home/app/hosts.js");
+            console.log("This app requires a pairing of dnsname -> reachable url");
+            console.log("This can be done in several ways:");
+            console.log("- Exported JS module file mounted to /home/app/hosts.js");
+            console.log("- JSON file provided to docker swarm secrets 'hosts'");
+            console.log("- Adding a consul KV pairing of apps/$SERVICE/$COLOR -> $SERVER_URL");
+            console.log("  also adding apps/$SERVICE/active -> $COLOR");
+            // TODO: Maybe we place something to keep the app running so it can be
+            //   inspected and troubleshooted
+            return
+        }
+    }
+}
+
+
+startHttpServer()
+LISTEN_ON_SSL && startHttpsServer()
+
+
+
+
+
+// TODO: Have the option to allow apps to register their endpoints.
+// At the moment we only register them in terraform.
+// Mainly helps with development - Production might want to keep it as is
 function getAppRoutes() {
     consul.kv.get({key: "apps", recurse: true}, (err, results) => {
         if(err) { console.log("ERR - SERVER.KVGETAPPS:\n", err);}
@@ -61,6 +104,8 @@ function getAppRoutes() {
 
 function registerEndpoints(apps, domain) {
     // For now we don't serve up anything on default domain until we have a need
+    // TODO: Modifying global variables in functions feels dirty to me, need to come
+    //   up with a better way to handle this
     HOSTS[domain] = `http://cert.${domain}:8080`
     Object.keys(apps).forEach((appName) => {
         let host = appName+"."+domain
@@ -73,34 +118,98 @@ function registerEndpoints(apps, domain) {
 }
 
 
-const onProtoUpgrade = (req, socket, head) => {
+function startHttpServer() {
+    const httpServer = http.createServer((req, res) => {
+
+        let isDockerHealthCheck = req.headers.host === "localhost" && req.url === "/healthcheck"
+        if(isDockerHealthCheck) { return serverState.handleHealthCheck(res) }
+
+        if(!HOSTS[req.headers.host]) {
+            console.log(`Could not find 'req.headers.host': ${req.headers.host} in 'HOSTS'`);
+            return send404(req, res);
+        }
+
+        let requrl = url.parse(req.url).pathname
+        let hostname = req.headers.host.split(".").length > 2
+            ? req.headers.host.replace(/^[\w]+\./, "")
+            : req.headers.host
+
+        if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
+            console.log("Certbot");
+            return proxy.web(req, res, { target: `http://cert.${hostname}:8080`}, (err) => {
+                console.log("ERR - SERVER.ACME-CHALLENGE:\n", err);
+                res.end("Could not proxy for certbot")
+            })
+        }
+        if(LISTEN_ON_SSL) {
+            res.writeHead(302, {"Location": "https://"+req.headers.host+req.url}); // Redirect to https
+            res.end();
+        }
+        else {
+            proxy.web(req, res, { target: "http://"+HOSTS[req.headers.host] }, (err) => {
+                console.log("ERR - SERVER.HTTP_SERVER:\n", err);
+                return send404(req, res);
+            })
+        }
+    })
+    console.log("======= Starting server =======");
+    serverState.registerSigHandler(httpServer, "http", REGISTER_SERVICE && !LISTEN_ON_SSL)
+    if(REGISTER_SERVICE && !LISTEN_ON_SSL) { service.register(DEV_ENV); }
+    httpServer.on("upgrade", onProtoUpgrade)
+    httpServer.listen(HTTP_PORT, () => {
+        console.log("HTTP proxy on port: "+HTTP_PORT)
+        serverState.changeServerState("http", true)
+        serverState.startIfAllReady()
+    });
+}
+
+function startHttpsServer() {
+    consul.kv.get({key: "ssl/", recurse: true}, (err, results) => {
+        if(err) { console.log("ERR - SERVER.KVGETSSL:\n", err);}
+        if(!results) {
+            console.log("ERR - SERVER.KVGETSSL: No ssl found. Exiting");
+            process.exit(1)
+        }
+
+        let certs = {}
+        results.forEach((cert) => {
+            let certName = cert.Key.split("/")[1]
+            certName === "privkey" && (certs["key"] = cert.Value)
+            certName === "fullchain" && (certs["cert"] = cert.Value)
+            certName === "chain" && (certs["ca"] = cert.Value)
+        })
+
+        //// Ensure we dont attempt to start httpsserver without certs
+        if (certs.key === "") {
+            return console.log("LISTEN_ON_SSL is set to true, but certs do not exist.");
+        }
+
+        const httpsServer = https.createServer(certs, (req, res) => {
+            if(!HOSTS[req.headers.host]) { return send404(req, res); }
+            let targetProto = SSL_TERMINATION ? "http:" : "https:"
+            proxy.web(req, res, { target: `${targetProto}//`+HOSTS[req.headers.host] }, (err) => {
+                console.log("ERR - SERVER.HTTPS_SERVER:\n", err);
+                return send404(req, res);
+            })
+        })
+        serverState.registerSigHandler(httpsServer, "https", REGISTER_SERVICE && LISTEN_ON_SSL)
+        if(REGISTER_SERVICE && LISTEN_ON_SSL) { service.register(DEV_ENV); }
+        httpsServer.on("upgrade", onProtoUpgrade)
+        httpsServer.listen(HTTPS_PORT, () => {
+            console.log("HTTPS proxy on port: "+HTTPS_PORT)
+            serverState.changeServerState("https", true)
+            serverState.startIfAllReady()
+        });
+    })
+}
+
+function onProtoUpgrade (req, socket, head) {
     let targetProto = LISTEN_ON_SSL
         ? SSL_TERMINATION ? "ws:" : "wss:"
         : "ws:"
     proxy.ws(req, socket, head, { target: `${targetProto}//`+HOSTS[req.headers.host] }, (err) => {
         err && console.log("WS proxy err: ", err);
     });
-}
-
-const handleHealthCheck = (req, res) => {
-    let systems_online = LISTEN_ON_SSL
-        ? serverState.https_is_healthy && serverState.server_is_healthy
-        : serverState.server_is_healthy
-    if(LOG_EVERY_NUM_CHECKS > 0 && ++serverCheckCount % LOG_EVERY_NUM_CHECKS === 0) {
-        console.log(`Container ${os.hostname}: ${systems_online?"Online":"Malfunctioning"}`);
-    }
-    let httpStatusCode = systems_online ? 200 : 404
-    res.writeHead(httpStatusCode)
-
-    let exitCode = systems_online ? "0" : "1"
-    res.end(exitCode)
-
-    let checkPassOrFail = systems_online ? "pass" : "fail"
-    let TTL = {
-        definition: "passOrFail",
-        path: `/v1/agent/check/${checkPassOrFail}/${CONSUL_CHECK_UUID}`,
-    }
-    REGISTER_SERVICE && service.sendToCatalog(TTL)
 }
 
 function send404(req, res) {
@@ -122,114 +231,4 @@ function send404(req, res) {
         }
         res.end(data)
     })
-}
-
-// Servers
-const httpServer = http.createServer((req, res) => {
-    let isDockerHealthCheck = req.headers.host === "localhost" && req.url === "/healthcheck"
-    if(isDockerHealthCheck) { return handleHealthCheck(req, res) }
-
-    if(!HOSTS[req.headers.host]) {
-        console.log(`Could not find 'req.headers.host': ${req.headers.host} in 'HOSTS'`);
-        return send404(req, res);
-    }
-
-    let requrl = url.parse(req.url).pathname
-    let hostname = req.headers.host.split(".").length > 2
-        ? req.headers.host.replace(/^[\w]+\./, "")
-        : req.headers.host
-
-    if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
-        console.log("Certbot");
-        return proxy.web(req, res, { target: `http://cert.${hostname}:8080`}, (err) => {
-            console.log("ERR - SERVER.ACME-CHALLENGE:\n", err);
-            res.end("Could not proxy for certbot")
-        })
-    }
-    if(LISTEN_ON_SSL) {
-        res.writeHead(302, {"Location": "https://"+req.headers.host+req.url}); // Redirect to https
-        res.end();
-    }
-    else {
-        proxy.web(req, res, { target: "http://"+HOSTS[req.headers.host] }, (err) => {
-            console.log("ERR - SERVER.HTTP_SERVER:\n", err);
-            return send404(req, res);
-        })
-    }
-})
-
-console.log("======= Starting server =======");
-registerGracefulShutdown(httpServer, "http")
-httpServer.on("upgrade", onProtoUpgrade)
-if(REGISTER_SERVICE) { service.register(DEV_ENV); }
-httpServer.listen(HTTP_PORT, () => {
-    console.log("HTTP proxy on port: "+HTTP_PORT)
-    setTimeout(() => {
-        serverState.changeServerState(true)
-        !LISTEN_ON_SSL && process.send('ready')
-    }, 1000);
-});
-
-
-if(LISTEN_ON_SSL) {
-
-    consul.kv.get({key: "ssl/", recurse: true}, (err, results) => {
-        if(err) { console.log("ERR - SERVER.KVGETSSL:\n", err);}
-
-        let certs = {}
-        results.forEach((cert) => {
-            let certName = cert.Key.split("/")[1]
-            certName === "privkey" && (certs["key"] = cert.Value)
-            certName === "fullchain" && (certs["cert"] = cert.Value)
-            certName === "chain" && (certs["ca"] = cert.Value)
-        })
-
-        // Ensure we dont attempt to start httpsserver without certs
-        if (certs.key === "") {
-            return console.log("LISTEN_ON_SSL is set to true, but certs do not exist.");
-        }
-
-        const httpsServer = https.createServer(certs, (req, res) => {
-            if(!HOSTS[req.headers.host]) { return send404(req, res); }
-            let targetProto = SSL_TERMINATION ? "http:" : "https:"
-            proxy.web(req, res, { target: `${targetProto}//`+HOSTS[req.headers.host] }, (err) => {
-                console.log("ERR - SERVER.HTTPS_SERVER:\n", err);
-                return send404(req, res);
-            })
-        })
-        registerGracefulShutdown(httpsServer, "https")
-        httpsServer.on("upgrade", onProtoUpgrade)
-        httpsServer.listen(HTTPS_PORT, () => {
-            console.log("HTTPS proxy on port: "+HTTPS_PORT)
-            setTimeout(() => {
-                process.send('ready')
-                serverState.changeHttpsState(true)
-            }, 1000);
-        });
-    })
-}
-
-function registerGracefulShutdown(server, type) {
-    let close = () => {
-        console.log(`${type} received SIG signal, shutting down`);
-        type === "http" && serverState.changeServerState(false)
-        type === "https" && serverState.changeHttpsState(false)
-        let closeServer = () => server.close(() => {
-            console.log(`Closed out ${type} successfully`);
-            setTimeout(() => {
-                // Wait for both http and https to close
-                let serversOffline = LISTEN_ON_SSL
-                    ? !serverState.https_is_healthy && !serverState.server_is_healthy
-                    : !serverState.server_is_healthy
-                serversOffline && console.log("== Exiting now ==") && process.exit()
-            }, 1000)
-        })
-        REGISTER_SERVICE && service.deregisterCheck(CONSUL_CHECK_UUID, closeServer);
-        !REGISTER_SERVICE && closeServer()
-    }
-    process.on("SIGTERM", close)
-    process.on("SIGHUP", close)
-    process.on("SIGINT", close)
-    process.on("SIGQUIT", close)
-    process.on("SIGABRT", close)
 }
