@@ -130,8 +130,8 @@ function startHttpServer() {
         }
 
         let requrl = url.parse(req.url).pathname
-        let hostname = req.headers.host.split(".").length > 2
-            ? req.headers.host.replace(/^[\w]+\./, "")
+        let hostname = req.headers.host.match(/([\w]+)\.[\w]+$/)
+            ? req.headers.host.match(/([\w]+)\.[\w]+$/)[0]
             : req.headers.host
 
         if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
