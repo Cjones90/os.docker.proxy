@@ -34,15 +34,27 @@ const httpProxy = require("http-proxy");
 const consul = require('consul')({host: `172.17.0.1`});
 const proxy = httpProxy.createProxyServer()
 
-
+const APP_ROUTE_RETRY_TIME = 15000
 
 serverState.registerConnection("http")
 LISTEN_ON_SSL && serverState.registerConnection("https")
 
 let HOSTS = {}
 
+let retries = 0;
+let startServers = (hostsLoaded) => {
+    console.log("HOSTSLOADED: ", hostsLoaded);
+    if(hostsLoaded) {
+        startHttpServer()
+        LISTEN_ON_SSL && startHttpsServer()
+    }
+    else {
+        ++retries < 3 && setTimeout(getAppRoutes.bind(this, startServers), APP_ROUTE_RETRY_TIME)
+    }
+}
+
 if(USE_CONSUL_ROUTES) {
-    getAppRoutes()
+    getAppRoutes(startServers)
     setInterval(getAppRoutes, 1000 * (DEV_ENV ? 30 : 60))
 }
 else {
@@ -70,11 +82,8 @@ else {
             return
         }
     }
+    startServers(true)
 }
-
-
-startHttpServer()
-LISTEN_ON_SSL && startHttpsServer()
 
 
 
@@ -83,10 +92,13 @@ LISTEN_ON_SSL && startHttpsServer()
 // TODO: Have the option to allow apps to register their endpoints.
 // At the moment we only register them in terraform.
 // Mainly helps with development - Production might want to keep it as is
-function getAppRoutes() {
+function getAppRoutes(callback) {
     consul.kv.get({key: "apps", recurse: true}, (err, results) => {
         if(err) { console.log("ERR - SERVER.KVGETAPPS:\n", err);}
-        if(!results) { return console.log("ERR - SERVER.KVGETAPPS: No apps found"); process.exit(1) }
+        if(!results) {
+            callback && callback(false);
+            return console.log("ERR - SERVER.KVGETAPPS: No apps found");
+        }
 
         let apps = {}
         results.forEach((app) => {
@@ -97,12 +109,12 @@ function getAppRoutes() {
             apps[appName][key] = value
         })
         consul.kv.get("domainname", (err, result) => {
-            registerEndpoints(apps, result.Value)
+            registerEndpoints(apps, result.Value, callback)
         })
     })
 }
 
-function registerEndpoints(apps, domain) {
+function registerEndpoints(apps, domain, callback) {
     // For now we don't serve up anything on default domain until we have a need
     // TODO: Modifying global variables in functions feels dirty to me, need to come
     //   up with a better way to handle this
@@ -114,6 +126,7 @@ function registerEndpoints(apps, domain) {
         HOSTS[host] = apps[appName][activeAppColor]
         HOSTS[betahost] = apps[appName][activeAppColor!=="blue"?"blue":"green"]
     })
+    callback && callback(Object.keys(HOSTS).length > 1)
     console.log("Endpoints refreshed");
 }
 
