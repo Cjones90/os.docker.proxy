@@ -8,7 +8,7 @@ const REGISTER_SERVICE = process.env.REGISTER_SERVICE
     : false
 
 const CONSUL_CHECK_UUID = os.hostname();
-const LOG_EVERY_NUM_CHECKS = process.env.LOG_EVERY_NUM_CHECKS || 15;
+const LOG_EVERY_NUM_CHECKS = process.env.LOG_EVERY_NUM_CHECKS || 30;
 let serverCheckCount = 0;
 
 module.exports = {
@@ -18,6 +18,7 @@ module.exports = {
     wsServer: null,
     redisServer: null,
     mongoServer: null,
+    pgServer: null,
     proxyServer: null,
 
     connectionsToCheck: {},
@@ -97,6 +98,7 @@ module.exports = {
         type === "redis" && (this.redisServer = server)
         type === "mongo" && (this.mongoServer = server)
         type === "proxy" && (this.proxyServer = server)
+        type === "pg" && (this.pgServer = server)
 
         process.on("SIGTERM", close)
         process.on("SIGHUP", close)
@@ -129,6 +131,7 @@ module.exports = {
         this.redisServer && this.redisServer.quit(() => { connectionCloseCallback("redis") })
         this.mongoServer && this.mongoServer.close(() => { connectionCloseCallback("mongo") })
         this.proxyServer && this.proxyServer.close(() => { connectionCloseCallback("proxy") })
+        this.pgServer && this.pgServer.end(() => { connectionCloseCallback("pg") })
 
     },
 

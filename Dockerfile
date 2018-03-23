@@ -16,13 +16,15 @@ ENV USE_AUTH            "true"
 ENV USE_CONSUL_DB       "true"
 
 
+
 FROM base AS cache
 RUN apk add --no-cache nodejs-npm=8.10.0-r0
 RUN npm install -g pm2@2.10.1 -only=prod --no-optional --no-package-lock
-ADD package.json /home/app/package.json
+
 
 
 FROM cache AS src
+ADD package.json /home/app/package.json
 RUN npm install -only=prod --no-optional --no-package-lock
 RUN cp -R node_modules prod_mods
 RUN npm install --no-optional --no-package-lock
@@ -36,6 +38,7 @@ HEALTHCHECK --interval=5s --timeout=2s --start-period=5s \
 LABEL com.consul.service="proxy"
 ENTRYPOINT ["pm2-runtime", "server/pm2.config.js"]
 CMD [""]
+
 
 
 FROM base AS prod
