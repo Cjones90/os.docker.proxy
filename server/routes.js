@@ -1,7 +1,5 @@
 'use strict';
 
-const fs = require("fs");
-
 const routes = function (req, res) {
 
     const respond = (response) => {

@@ -2,10 +2,10 @@
 
 const http = require("http");
 const https = require("https");
-const os = require("os");
 const fs = require("fs");
 const url = require("url");
 const path = require("path");
+const qs = require('querystring');
 
 const { service } = require("os-npm-util");
 const routes = require("./routes.js");
@@ -13,17 +13,23 @@ const serverState = require("./serverState.js");
 
 const BIN = process.env.BIN;
 const PUB_FILES = process.env.PUB_FILES;
+const STATIC_FILES = process.env.STATIC_FILES;
 const OUTPUT_FILES = process.env.OUTPUT_FILES;
-const DEV_ENV = process.env.DEV_ENV ? JSON.parse(process.env.DEV_ENV) : ""
-const REGISTER_SERVICE = process.env.REGISTER_SERVICE
-    ? JSON.parse(process.env.REGISTER_SERVICE)
-    : false;
+const DEV_ENV = process.env.DEV_ENV === "true"
+const REGISTER_SERVICE = process.env.REGISTER_SERVICE === "true";
+const SERVICE_NAME = process.env.SERVICE_NAME ? process.env.SERVICE_NAME : ""
+
+service.setConfig({
+    register: REGISTER_SERVICE,
+    devEvn: DEV_ENV,
+    serviceName: SERVICE_NAME
+})
 
 const HTTP_PORT = process.env.HTTP_PORT ? process.env.HTTP_PORT : 80;
 const HTTPS_PORT = process.env.HTTPS_PORT ? process.env.HTTPS_PORT : 443;
-const LISTEN_ON_SSL = process.env.LISTEN_ON_SSL ? JSON.parse(process.env.LISTEN_ON_SSL) : false;
-const SSL_TERMINATION = process.env.SSL_TERMINATION ? JSON.parse(process.env.SSL_TERMINATION) : false;
-const USE_CONSUL_ROUTES = process.env.USE_CONSUL_ROUTES ? JSON.parse(process.env.USE_CONSUL_ROUTES) : false;
+const LISTEN_ON_SSL = process.env.LISTEN_ON_SSL === "true";
+const SSL_TERMINATION = process.env.SSL_TERMINATION === "true";
+const USE_CONSUL_ROUTES = process.env.USE_CONSUL_ROUTES === "true";
 
 const httpProxy = require("http-proxy");
 

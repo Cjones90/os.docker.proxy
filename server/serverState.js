@@ -3,9 +3,7 @@
 const os = require("os");
 const { service } = require("os-npm-util");
 
-const REGISTER_SERVICE = process.env.REGISTER_SERVICE
-    ? JSON.parse(process.env.REGISTER_SERVICE)
-    : false
+const REGISTER_SERVICE = process.env.REGISTER_SERVICE === "true";
 
 const CONSUL_CHECK_UUID = os.hostname();
 const LOG_EVERY_NUM_CHECKS = process.env.LOG_EVERY_NUM_CHECKS || 30;

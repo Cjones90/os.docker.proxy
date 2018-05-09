@@ -1,8 +1,8 @@
 
-FROM alpine:edge AS base
+FROM alpine:3.7 AS base
 WORKDIR /home/app
 RUN apk add --no-cache \
-    nodejs=8.10.0-r0 \
+    nodejs=8.9.3-r1 \
     vim  \
     bash \
     curl \
@@ -11,19 +11,15 @@ RUN apk add --no-cache \
 ENV PUB_FILES           ./pub/
 ENV BIN                 ./server/bin/
 ENV OUTPUT_FILES        ./server/output/
+ENV STATIC_FILES        ./server/static/
 ENV REGISTER_SERVICE    "true"
 ENV USE_AUTH            "true"
 ENV USE_CONSUL_DB       "true"
 
 
 
-FROM base AS cache
-RUN apk add --no-cache nodejs-npm=8.10.0-r0
+FROM base AS src
 RUN npm install -g pm2@2.10.1 -only=prod --no-optional --no-package-lock
-
-
-
-FROM cache AS src
 ADD package.json /home/app/package.json
 RUN npm install -only=prod --no-optional --no-package-lock
 RUN cp -R node_modules prod_mods
@@ -48,7 +44,7 @@ COPY --from=src /home/app/pub/app.bundle.js ./pub/app.bundle.js
 COPY --from=src /home/app/pub/index.html ./pub/index.html
 COPY --from=src /home/app/server /home/app/server
 COPY --from=src /home/app/docker-compose.yml /home/app/docker-compose.yml
-COPY --from=cache /usr/lib/node_modules/pm2 /usr/lib/node_modules/pm2
+COPY --from=src /usr/lib/node_modules/pm2 /usr/lib/node_modules/pm2
 RUN ln -s /usr/lib/node_modules/pm2/bin/pm2* /usr/bin
 HEALTHCHECK --interval=10s --timeout=2s --start-period=30s \
     CMD exit $(curl -sS http://localhost/healthcheck; echo $?)
