@@ -5,7 +5,6 @@ const { service } = require("os-npm-util");
 
 const REGISTER_SERVICE = process.env.REGISTER_SERVICE === "true";
 
-const CONSUL_CHECK_UUID = os.hostname();
 const LOG_EVERY_NUM_CHECKS = process.env.LOG_EVERY_NUM_CHECKS || 30;
 let serverCheckCount = 0;
 
@@ -70,18 +69,15 @@ module.exports = {
         res.end(exitCode)
 
         let checkPassOrFail = systems_online ? "pass" : "fail"
-        let TTL = {
-            definition: "passOrFail",
-            path: `/v1/agent/check/${checkPassOrFail}/${CONSUL_CHECK_UUID}`,
-        }
-        REGISTER_SERVICE && service.sendToCatalog(TTL)
+
+        REGISTER_SERVICE && service.sendHealthCheck(checkPassOrFail)
     },
 
     registerSigHandler: function (server, type, deregister) {
         let close = () => {
             console.log(`${type} received SIG signal, shutting down`);
             deregister && (this.deregistering = true);
-            deregister && service.deregisterCheck(CONSUL_CHECK_UUID, () => {
+            deregister && service.deregisterSelf(() => {
                 this.deregistering = false
                 this.tryToExit();
             });
