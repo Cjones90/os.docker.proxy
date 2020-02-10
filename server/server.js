@@ -46,6 +46,7 @@ serverState.registerConnection("http")
 LISTEN_ON_SSL && serverState.registerConnection("https")
 
 let HOSTS = {}
+let PROTOS = {}
 
 let retries = 0;
 let startServers = (hostsLoaded) => {
@@ -127,10 +128,13 @@ function registerEndpoints(apps, domain, callback) {
     HOSTS[domain] = `http://cert.${domain}:8080`
     Object.keys(apps).forEach((appName) => {
         let host = appName+"."+domain
+        let devhost = appName+".dev."+domain
         let betahost = "beta."+host
         let activeAppColor = apps[appName]["active"]
         HOSTS[host] = apps[appName][activeAppColor]
+        HOSTS[devhost] = apps[appName][activeAppColor!=="blue"?"blue":"green"]
         HOSTS[betahost] = apps[appName][activeAppColor!=="blue"?"blue":"green"]
+        PROTOS[host] = apps[appName]["proto"]
     })
     callback && callback(Object.keys(HOSTS).length > 1)
     console.log("Endpoints refreshed");
@@ -160,7 +164,7 @@ function startHttpServer() {
                 res.end("Could not proxy for certbot")
             })
         }
-        if(LISTEN_ON_SSL) {
+        if(LISTEN_ON_SSL && PROTOS[req.headers.host] !== "http") {
             res.writeHead(302, {"Location": "https://"+req.headers.host+req.url}); // Redirect to https
             res.end();
         }
