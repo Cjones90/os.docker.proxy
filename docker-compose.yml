@@ -4,7 +4,7 @@ services:
         build:
             context: .
             target: prod
-        image: jestrr/proxy:0.10.6
+        image: jestrr/proxy:0.10.7
         networks:
             - proxy
         ports:
@@ -33,6 +33,7 @@ services:
             USE_CONSUL_ROUTES:  "true"
             HTTP_PORT:          80
             HTTPS_PORT:         443
+            CERT_PORT:          7080
             # DOMAIN:             "${DOMAIN}"
 
 networks:

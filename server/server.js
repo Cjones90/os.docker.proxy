@@ -27,6 +27,7 @@ service.setConfig({
 
 const HTTP_PORT = process.env.HTTP_PORT ? process.env.HTTP_PORT : 80;
 const HTTPS_PORT = process.env.HTTPS_PORT ? process.env.HTTPS_PORT : 443;
+const CERT_PORT = process.env.CERT_PORT ? process.env.CERT_PORT : 7080
 const LISTEN_ON_SSL = process.env.LISTEN_ON_SSL === "true";
 const SSL_TERMINATION = process.env.SSL_TERMINATION === "true";
 const USE_CONSUL_ROUTES = process.env.USE_CONSUL_ROUTES === "true";
@@ -125,7 +126,7 @@ function registerEndpoints(apps, domain, callback) {
     // For now we don't serve up anything on default domain until we have a need
     // TODO: Modifying global variables in functions feels dirty to me, need to come
     //   up with a better way to handle this
-    HOSTS[domain] = `http://cert.${domain}:8080`
+    HOSTS[domain] = `http://cert.${domain}:${CERT_PORT}`
     Object.keys(apps).forEach((appName) => {
         let host = appName+"."+domain
         let devhost = appName+".dev."+domain
@@ -159,7 +160,7 @@ function startHttpServer() {
 
         if(requrl.indexOf("/.well-known/acme-challenge") > -1) {
             console.log("Certbot");
-            return proxy.web(req, res, { target: `http://cert.${hostname}:8080`}, (err) => {
+            return proxy.web(req, res, { target: `http://cert.${hostname}:${CERT_PORT}`}, (err) => {
                 console.log("ERR - SERVER.ACME-CHALLENGE:\n", err);
                 res.end("Could not proxy for certbot")
             })
